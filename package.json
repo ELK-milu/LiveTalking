@@ -1,0 +1,23 @@
+{
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0"
+  },
+  "name": "livetalking",
+  "description": "Real time interactive streaming digital human， realize audio video synchronous dialogue. It can basically achieve commercial effects.   实时交互流式数字人，实现音视频同步对话。基本可以达到商用效果",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lipku/LiveTalking.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lipku/LiveTalking/issues"
+  },
+  "homepage": "https://github.com/lipku/LiveTalking#readme"
+}
