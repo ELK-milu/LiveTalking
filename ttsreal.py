@@ -65,6 +65,7 @@ class BaseTTS:
         self.state = State.RUNNING
 
     def flush_talk(self):
+        # 停止对话
         self.msgqueue.queue.clear()
         self.state = State.PAUSE
 
@@ -240,13 +241,18 @@ class SovitsTTS(BaseTTS):
     def txt_to_audio(self,msg):
         request,textevent = msg
 
-        voice_type = self.voice_type
-        emotion_type = self.emotion_type
-        if request['voice'] is not None and request['voice'] != '':
-            voice_type = request['voice']
+        voice = request.get('voice')  # 如果'voice'不存在，返回None
+        if voice is not None and voice != '':
+            voice_type = voice
+        else:
+            voice_type = self.voice_type
 
-        if request['emotion'] is not None and request['emotion'] != '':
-            emotion_type = request['emotion']
+        emotion = request.get('emotion')  # 如果'voice'不存在，返回None
+        if emotion is not None and emotion != '':
+            emotion_type = emotion
+        else:
+            emotion_type = self.emotion_type
+
 
         self.stream_tts(
             self.gpt_sovits(
@@ -593,7 +599,8 @@ class DoubaoTTS(BaseTTS):
                 },
                 "audio": {
                     "voice_type": "zh_female_linjianvhai_moon_bigtts",
-                    "encoding": "wav",
+                    "encoding": "pcm",
+                    "rate": 16000,
                     "speed_ratio": 1.0,
                     "volume_ratio": 1.0,
                     "pitch_ratio": 1.0,
@@ -633,9 +640,13 @@ class DoubaoTTS(BaseTTS):
         start = time.perf_counter()
         text = request['text']
         print(text)
-        voice_type = self.voice_type
-        if request['voice'] is not None and request['voice'] != '':
-            voice_type = request['voice']
+
+        voice = request.get('voice')  # 如果'voice'不存在，返回None
+        if voice is not None and voice != '':
+            voice_type = voice
+        else:
+            voice_type = self.voice_type
+
         # 创建请求对象
         post = self.Post
         response = post.Post(self.parent.sessionid, text, voice_type, self.api_url)
@@ -655,28 +666,33 @@ class DoubaoTTS(BaseTTS):
             msg
         )
 
-    def stream_tts(self, audio_stream, msg):
-        request, textevent = msg
+    def stream_tts(self,audio_stream,msg):
+        request,textevent = msg
         text = request['text']
         first = True
+        last_stream = np.array([],dtype=np.float32)
         for chunk in audio_stream:
-            if chunk is not None and len(chunk) > 0:
+            if chunk is not None and len(chunk)>0:
                 stream = np.frombuffer(chunk, dtype=np.int16).astype(np.float32) / 32767
-                stream = resampy.resample(x=stream, sr_orig=24000, sr_new=self.sample_rate)
-                # byte_stream=BytesIO(buffer)
-                # stream = self.__create_bytes_stream(byte_stream)
+                stream = np.concatenate((last_stream,stream))
+                #stream = resampy.resample(x=stream, sr_orig=24000, sr_new=self.sample_rate)
+                #byte_stream=BytesIO(buffer)
+                #stream = self.__create_bytes_stream(byte_stream)
                 streamlen = stream.shape[0]
-                idx = 0
+                idx=0
                 while streamlen >= self.chunk:
-                    eventpoint = None
+                    eventpoint=None
                     if first:
-                        eventpoint = {'status': 'start', 'text': text, 'msgenvent': textevent}
+                        eventpoint={'status':'start','text':text,'msgevent':textevent}
                         first = False
-                    self.parent.put_audio_frame(stream[idx:idx + self.chunk], eventpoint)
+                    self.parent.put_audio_frame(stream[idx:idx+self.chunk],eventpoint)
                     streamlen -= self.chunk
                     idx += self.chunk
-        eventpoint = {'status': 'end', 'text': text, 'msgenvent': textevent}
-        self.parent.put_audio_frame(np.zeros(self.chunk, np.float32), eventpoint)
+                last_stream = stream[idx:] #get the remain stream
+        eventpoint={'status':'end','text':text,'msgevent':textevent}
+        self.parent.put_audio_frame(np.zeros(self.chunk,np.float32),eventpoint)
+
+
 
 
 class XTTS(BaseTTS):

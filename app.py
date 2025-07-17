@@ -172,11 +172,38 @@ async def human(request):
             ),
         )
 
+
+async def start_talk(request):
+    try:
+        params = await request.json()
+
+        sessionid = params.get('sessionid', 0)
+        nerfreals[sessionid].enabled = True
+
+        return web.Response(
+            content_type="application/json",
+            text=json.dumps(
+                {"code": 0, "msg": "ok"}
+            ),
+        )
+    except Exception as e:
+        logger.exception('exception:')
+        return web.Response(
+            content_type="application/json",
+            text=json.dumps(
+                {"code": -1, "msg": str(e)}
+            ),
+        )
+
+
+
+
 async def interrupt_talk(request):
     try:
         params = await request.json()
 
         sessionid = params.get('sessionid',0)
+        nerfreals[sessionid].enabled = False
         nerfreals[sessionid].flush_talk()
         
         return web.Response(
@@ -407,6 +434,7 @@ if __name__ == '__main__':
     appasync.router.add_post("/humanaudio", humanaudio)
     appasync.router.add_post("/set_audiotype", set_audiotype)
     appasync.router.add_post("/record", record)
+    appasync.router.add_post("/start_talk", start_talk)
     appasync.router.add_post("/interrupt_talk", interrupt_talk)
     appasync.router.add_post("/is_speaking", is_speaking)
     appasync.router.add_static('/',path='web')
